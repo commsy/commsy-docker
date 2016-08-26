@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
         zlib1g-dev \
         libicu-dev \
         g++ \
+        sudo \
     && docker-php-ext-configure intl \
     && docker-php-ext-install -j$(nproc) intl \
     && docker-php-ext-install -j$(nproc) mcrypt \
@@ -37,15 +38,35 @@ RUN npm -g install bower gulp
 
 VOLUME /var/www/html
 
-# clone commsy
-RUN git clone https://github.com/commsy/commsy.git \
-    && chown -R www-data:www-data /var/www/html/commsy
+ENV COMMSY_COMMIT_SHA 18ba68ecac21d341cf56f5402be08277ee5baa9d
 
 # download commsy
 # RUN curl -o commsy.zip -SL https://github.com/commsy/commsy/releases/download/v9.0.0-alpha.1/commsy_v9.0.0-alpha.1.zip \
-#         && unzip commsy.zip -d commsy \
+#         && unzip commsy.zip -d /var/www/html \
 #         && rm commsy.zip \
-#         && chown -R www-data:www-data /var/www/html/commsy
+#         && chown -R www-data:www-data /var/www/html
+
+RUN curl -o commsy.zip -SL https://github.com/commsy/commsy/archive/${COMMSY_COMMIT_SHA}.zip \
+        && unzip commsy.zip -d /usr/src/commsy \
+        && rm commsy.zip \
+        && mv /usr/src/commsy/commsy-${COMMSY_COMMIT_SHA}/* /usr/src/commsy/ \
+        && rm -r /usr/src/commsy/commsy-${COMMSY_COMMIT_SHA} \
+        && chown -R www-data:www-data /usr/src/commsy
+
+
+# RUN cd /usr/src/ \
+#         && git clone https://github.com/commsy/commsy.git -n commsy \
+#         && cd commsy \
+#         && git checkout -b 9.0 ${COMMSY_COMMIT_SHA} \
+#         && mv /usr/src/commsy/* /var/www/html \
+#         && rm -r /usr/src/commsy \
+#         && chown -R www-data:www-data /var/www/html
+
+COPY docker-entrypoint.sh /entrypoint.sh
+RUN chmod u+x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["php-fpm"]
 
 #COPY docker-entrypoint.sh /entrypoint.sh
 
