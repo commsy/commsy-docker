@@ -24,7 +24,10 @@ file_env() {
 }
 
 if [ "$1" == php-fpm ]; then
+
+    firstRun=
     if ! [ -e VERSION ]; then
+        firstRun=1
         echo >&2 "CommSy not found in $PWD - copying now..."
         tar cf - --one-file-system -C /usr/src/commsy . | tar xf -
         echo >&2 "Complete! CommSy has been successfully copied to $PWD"
@@ -145,7 +148,11 @@ if [ "$1" == php-fpm ]; then
 
 	sudo -H -u www-data bash -c 'php composer.phar install --no-interaction --optimize-autoloader'
     sudo -H -u www-data bash -c 'php bin/console cache:clear --env=prod --no-debug'
-#    sudo -H -u www-data bash -c 'php bin/console doctrine:fixtures:load --append'
+
+    if [ "$firstRun" ]; then
+        sudo -H -u www-data bash -c 'php bin/console doctrine:fixtures:load --append'
+    fi
+
     sudo -H -u www-data bash -c 'php bin/console --no-interaction doctrine:migrations:migrate'
     sudo -H -u www-data bash -c 'php bin/console fos:elastica:populate'
     sudo -H -u www-data bash -c 'npm install'
